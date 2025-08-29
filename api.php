@@ -2,7 +2,7 @@
 header('Content-Type: application/json');
 $servers = [
     ['name' => 'Velocity Proxy', 'host' => 'join.queazified.co.uk', 'port' => 25565],
-    ['name' => 'Paper Server', 'host' => '127.0.0.1', 'port' => 25565],
+    ['name' => 'HUB-01', 'host' => 'bd.queazified.co.uk', 'port' => 25566],
     ['name' => 'Purpur Server', 'host' => '127.0.0.1', 'port' => 25566],
     // ...add more servers as needed...
 ];
