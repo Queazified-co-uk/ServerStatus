@@ -28,6 +28,7 @@
   button:disabled{opacity:0.6;cursor:default}
   .small{font-size:13px;color:var(--muted)}
   .ping{font-weight:700;color:#cfd8e7}
+  .debug{margin-top:12px;font-size:13px;color:var(--muted);white-space:pre-wrap;max-height:160px;overflow:auto;background:rgba(255,255,255,0.02);padding:10px;border-radius:8px}
 </style>
 </head>
 <body>
@@ -52,16 +53,33 @@
           <!-- rows injected here -->
         </tbody>
       </table>
+
+      <div id="file-warning" class="muted" style="margin-top:10px;display:none">
+        Warning: Opening index.html via file:// will prevent API requests. Serve with a web server, e.g.:
+        <div class="muted">cd /workspaces/ServerStatus && php -S 0.0.0.0:8000</div>
+      </div>
+
+      <div id="debug" class="debug" style="display:none"></div>
     </div>
   </div>
 
 <script>
-const api = 'api.php';
+const api = './api.php'; // explicit relative path
 const intervalMs = 5000;
 const tableBody = document.querySelector('#status-table tbody');
 const lastChecked = document.getElementById('last-checked');
 const refreshBtn = document.getElementById('refresh');
+const debugEl = document.getElementById('debug');
+const fileWarning = document.getElementById('file-warning');
 let timer = null;
+const FETCH_TIMEOUT = 4000; // ms
+
+// show warning when opened over file://
+if (location.protocol === 'file:') {
+  fileWarning.style.display = 'block';
+  debugEl.style.display = 'block';
+  debugEl.textContent = 'Detected file:// protocol — API fetches will fail. Serve the folder with a web server.';
+}
 
 function renderRows(data){
   tableBody.innerHTML = '';
@@ -69,7 +87,7 @@ function renderRows(data){
     const tr = document.createElement('tr');
 
     const tdName = document.createElement('td');
-    tdName.innerHTML = '<div class="name">'+escapeHtml(s.name)+'</div><div class="muted">'+escapeHtml(s.name.toLowerCase())+'</div>';
+    tdName.innerHTML = '<div class="name">'+escapeHtml(s.name)+'</div><div class="muted">'+escapeHtml((s.name || '').toLowerCase())+'</div>';
     tr.appendChild(tdName);
 
     const tdAddr = document.createElement('td');
@@ -79,7 +97,7 @@ function renderRows(data){
     const tdStatus = document.createElement('td');
     const badge = document.createElement('span');
     badge.className = 'badge ' + (s.status === 'online' ? 'online' : 'offline');
-    const pingText = s.ping_ms !== null ? (' • ' + s.ping_ms + 'ms') : '';
+    const pingText = (s.ping_ms !== undefined && s.ping_ms !== null) ? (' • ' + s.ping_ms + 'ms') : '';
     badge.innerHTML = (s.status === 'online' ? '● Online' : '○ Offline') + '<span class="muted" style="margin-left:8px;font-weight:600">'+pingText+'</span>';
     tdStatus.appendChild(badge);
     tr.appendChild(tdStatus);
@@ -90,18 +108,29 @@ function renderRows(data){
 
 function fetchStatus(){
   refreshBtn.disabled = true;
-  const url = api + '?_=' + Date.now();
-  fetch(url).then(r=>{
-    if(!r.ok) throw new Error('Network');
-    return r.json();
-  }).then(data=>{
-    renderRows(data);
-    const now = new Date();
-    lastChecked.textContent = 'Last: ' + now.toLocaleTimeString();
-  }).catch(e=>{
-    tableBody.innerHTML = '<tr><td colspan="3" class="muted">Error fetching status</td></tr>';
-    lastChecked.textContent = 'Last: —';
-  }).finally(()=>refreshBtn.disabled = false);
+  debugEl.style.display = 'none';
+  const controller = new AbortController();
+  const timeout = setTimeout(()=>controller.abort(), FETCH_TIMEOUT);
+
+  fetch(api + '?_=' + Date.now(), { signal: controller.signal })
+    .then(r=>{
+      clearTimeout(timeout);
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    }).then(data=>{
+      renderRows(data);
+      const now = new Date();
+      lastChecked.textContent = 'Last: ' + now.toLocaleTimeString();
+    }).catch(err=>{
+      console.error('Fetch error', err);
+      tableBody.innerHTML = '<tr><td colspan="3" class="muted">Error fetching status — see debug below</td></tr>';
+      lastChecked.textContent = 'Last: —';
+      debugEl.style.display = 'block';
+      debugEl.textContent = 'Error fetching ' + api + ':\n' + String(err) + '\n\nTip: make sure you are serving this directory with a PHP-enabled server (php -S) and that api.php is reachable.';
+    }).finally(()=>{
+      clearTimeout(timeout);
+      refreshBtn.disabled = false;
+    });
 }
 
 refreshBtn.addEventListener('click', ()=>{
