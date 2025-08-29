@@ -108,7 +108,7 @@
   <div class="wrap">
     <div class="topbar">
       <div class="brand">
-        <div class="logo">MC</div>
+        <div class="logo">Q</div>
         <div>
           <h1>Minecraft Server Status</h1>
           <div class="subtitle">Live status for proxy & sub-servers</div>
@@ -139,11 +139,11 @@
 
 <script>
 const servers = [
-  { name: 'Velocity Proxy', host: 'join.queazified.co.uk', port: 25565, showAddress: true, type: 'Proxy' },
-  { name: 'Paper Server',    host: '127.0.0.1',           port: 25565, showAddress: false, type: 'Paper' },
-  { name: 'Purpur Server',   host: '127.0.0.1',           port: 25566, showAddress: false, type: 'Purpur' },
-  { name: 'Waterfall Server',host: '127.0.0.1',           port: 25567, showAddress: false, type: 'Bungee' },
-  { name: 'Fabric Server',   host: '127.0.0.1',           port: 25568, showAddress: false, type: 'Fabric' },
+  { name: 'PROXY-01', host: 'join.queazified.co.uk', port: 25565, showAddress: true, type: 'Proxy' },
+  { name: 'HUB-01',    host: 'bd.queazified.co.uk',           port: 25566, showAddress: false, type: 'Paper' },
+  { name: 'HUB-02',   host: 'bd.queazified.co.uk',           port: 25567, showAddress: false, type: 'Purpur' },
+  { name: 'LIMBO-01',host: 'bd.queazified.co.uk',           port: 25996, showAddress: false, type: 'Bungee' },
+  { name: 'GENESIS',   host: 'bd.queazified.co.uk',           port: 25652, showAddress: false, type: 'Fabric' },
 ];
 const intervalMs = 5000;
 const tableBody = document.querySelector('#status-table tbody');
