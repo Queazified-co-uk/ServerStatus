@@ -1,4 +1,17 @@
 <?php
+declare(strict_types=1);
+ini_set('display_errors', '0');
+error_reporting(0);
+
+// Check for unexpected output before headers
+if (headers_sent($file, $line) || ob_get_length()) {
+    if (ob_get_length()) ob_end_clean();
+    http_response_code(500);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['error' => 'Unexpected output before JSON', 'file' => $file ?? '', 'line' => $line ?? '']);
+    exit;
+}
+
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 
@@ -33,4 +46,11 @@ foreach ($servers as $s) {
     ];
 }
 
-echo json_encode($result, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
+$json = json_encode($result, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+if ($json === false) {
+    http_response_code(500);
+    echo json_encode(['error' => 'JSON encode error', 'msg' => json_last_error_msg()]);
+    exit;
+}
+
+echo $json;
