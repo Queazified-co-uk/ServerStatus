@@ -1,3 +1,8 @@
+<?php
+// Redirect to the static HTML status page
+header('Location: status.html', true, 302);
+exit;
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
