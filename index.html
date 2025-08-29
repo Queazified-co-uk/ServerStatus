@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Minecraft Server Status</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #222; color: #eee; }
+        table { margin: 2em auto; border-collapse: collapse; }
+        th, td { padding: 0.7em 1.2em; border: 1px solid #444; }
+        th { background: #333; }
+        .online { color: #4CAF50; font-weight: bold; }
+        .offline { color: #F44336; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1 style="text-align:center;">Minecraft Server Status</h1>
+    <table id="status-table">
+        <tr>
+            <th>Server</th>
+            <th>Address</th>
+            <th>Status</th>
+        </tr>
+    </table>
+    <script>
+        function updateStatus() {
+            fetch('api.php')
+                .then(response => response.json())
+                .then(data => {
+                    const table = document.getElementById('status-table');
+                    // Remove old rows except header
+                    while (table.rows.length > 1) table.deleteRow(1);
+                    data.forEach(srv => {
+                        const row = table.insertRow();
+                        row.insertCell().textContent = srv.name;
+                        row.insertCell().textContent = srv.host + ':' + srv.port;
+                        const statusCell = row.insertCell();
+                        statusCell.textContent = srv.status.charAt(0).toUpperCase() + srv.status.slice(1);
+                        statusCell.className = srv.status;
+                    });
+                });
+        }
+        updateStatus();
+        setInterval(updateStatus, 5000); // Refresh every 5 seconds
+    </script>
+</body>
+</html>
