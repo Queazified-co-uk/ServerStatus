@@ -54,38 +54,27 @@
         </tbody>
       </table>
 
-      <div id="file-warning" class="muted" style="margin-top:10px;display:none">
-        Warning: Opening index.html via file:// will prevent API requests. Serve with a web server, e.g.:
-        <div class="muted">cd /workspaces/ServerStatus && php -S 0.0.0.0:8000</div>
-      </div>
-
       <div id="debug" class="debug" style="display:none"></div>
     </div>
   </div>
 
 <script>
-const api = './api.php'; // explicit relative path
+const servers = [
+  { name: 'Velocity Proxy', host: 'join.queazified.co.uk', port: 25565 },
+  { name: 'Paper Server', host: '127.0.0.1', port: 25565 },
+  { name: 'Purpur Server', host: '127.0.0.1', port: 25566 },
+];
 const intervalMs = 5000;
 const tableBody = document.querySelector('#status-table tbody');
 const lastChecked = document.getElementById('last-checked');
 const refreshBtn = document.getElementById('refresh');
 const debugEl = document.getElementById('debug');
-const fileWarning = document.getElementById('file-warning');
 let timer = null;
-const FETCH_TIMEOUT = 4000; // ms
-
-// show warning when opened over file://
-if (location.protocol === 'file:') {
-  fileWarning.style.display = 'block';
-  debugEl.style.display = 'block';
-  debugEl.textContent = 'Detected file:// protocol — API fetches will fail. Serve the folder with a web server.';
-}
 
 function renderRows(data){
   tableBody.innerHTML = '';
   data.forEach(s => {
     const tr = document.createElement('tr');
-
     const tdName = document.createElement('td');
     tdName.innerHTML = '<div class="name">'+escapeHtml(s.name)+'</div><div class="muted">'+escapeHtml((s.name || '').toLowerCase())+'</div>';
     tr.appendChild(tdName);
@@ -106,31 +95,39 @@ function renderRows(data){
   });
 }
 
-function fetchStatus(){
+async function fetchStatus(){
   refreshBtn.disabled = true;
   debugEl.style.display = 'none';
-  const controller = new AbortController();
-  const timeout = setTimeout(()=>controller.abort(), FETCH_TIMEOUT);
-
-  fetch(api + '?_=' + Date.now(), { signal: controller.signal })
-    .then(r=>{
-      clearTimeout(timeout);
-      if(!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json();
-    }).then(data=>{
-      renderRows(data);
-      const now = new Date();
-      lastChecked.textContent = 'Last: ' + now.toLocaleTimeString();
-    }).catch(err=>{
-      console.error('Fetch error', err);
-      tableBody.innerHTML = '<tr><td colspan="3" class="muted">Error fetching status — see debug below</td></tr>';
-      lastChecked.textContent = 'Last: —';
+  const results = [];
+  for (const s of servers) {
+    let apiUrl = `https://api.mcstatus.io/v2/status/java/${encodeURIComponent(s.host)}:${s.port}`;
+    try {
+      const resp = await fetch(apiUrl);
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const data = await resp.json();
+      results.push({
+        name: s.name,
+        host: s.host,
+        port: s.port,
+        status: data.online ? 'online' : 'offline',
+        ping_ms: data.online ? data.latency : null,
+      });
+    } catch (err) {
+      results.push({
+        name: s.name,
+        host: s.host,
+        port: s.port,
+        status: 'offline',
+        ping_ms: null,
+      });
       debugEl.style.display = 'block';
-      debugEl.textContent = 'Error fetching ' + api + ':\n' + String(err) + '\n\nTip: make sure you are serving this directory with a PHP-enabled server (php -S) and that api.php is reachable.';
-    }).finally(()=>{
-      clearTimeout(timeout);
-      refreshBtn.disabled = false;
-    });
+      debugEl.textContent = `Error fetching ${apiUrl}:\n${err}`;
+    }
+  }
+  renderRows(results);
+  const now = new Date();
+  lastChecked.textContent = 'Last: ' + now.toLocaleTimeString();
+  refreshBtn.disabled = false;
 }
 
 refreshBtn.addEventListener('click', ()=>{
@@ -142,6 +139,9 @@ fetchStatus();
 timer = setInterval(fetchStatus, intervalMs);
 
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+</script>
+</body>
+</html>
 </script>
 </body>
 </html>
